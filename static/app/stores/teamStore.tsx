@@ -5,12 +5,11 @@ import {Team} from 'sentry/types';
 
 import {CommonStoreInterface} from './types';
 
-const MAX_TEAMS = 100;
-
 type State = {
   teams: Team[];
   loading: boolean;
   hasMore: boolean | null;
+  cursor: string | null;
   loadedUserTeams: boolean;
 };
 
@@ -18,7 +17,7 @@ type TeamStoreInterface = CommonStoreInterface<State> & {
   initialized: boolean;
   state: State;
   reset(): void;
-  loadInitialData(items: Team[], hasMore?: boolean | null): void;
+  loadInitialData(items: Team[], hasMore?: boolean | null, cursor?: string | null): void;
   onUpdateSuccess(itemId: string, response: Team): void;
   onRemoveSuccess(slug: string): void;
   onCreateSuccess(team: Team): void;
@@ -34,6 +33,7 @@ const teamStoreConfig: Reflux.StoreDefinition & TeamStoreInterface = {
     loadedUserTeams: false,
     loading: true,
     hasMore: null,
+    cursor: null,
   },
 
   init() {
@@ -48,17 +48,23 @@ const teamStoreConfig: Reflux.StoreDefinition & TeamStoreInterface = {
   },
 
   reset() {
-    this.state = {teams: [], loadedUserTeams: false, loading: true, hasMore: null};
+    this.state = {
+      teams: [],
+      loadedUserTeams: false,
+      loading: true,
+      hasMore: null,
+      cursor: null,
+    };
   },
 
-  loadInitialData(items, hasMore = null) {
+  loadInitialData(items, hasMore, cursor) {
     this.initialized = true;
     this.state = {
       teams: items.sort((a, b) => a.slug.localeCompare(b.slug)),
-      // TODO(davidenwang): Replace with a more reliable way of knowing when we have loaded all teams
-      loadedUserTeams: items.length < MAX_TEAMS,
+      loadedUserTeams: !hasMore,
       loading: false,
-      hasMore,
+      hasMore: hasMore ?? this.state.hasMore,
+      cursor: cursor ?? this.state.cursor,
     };
     this.trigger(new Set(items.map(item => item.id)));
   },
